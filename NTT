@@ -1,0 +1,54 @@
+typedef long long ll;
+typedef __int128_t i7;
+
+template<typename T,T mod,T g>
+struct NTT{
+
+    static constexpr int cnt=__builtin_ctzll(mod-1);
+    int n;
+
+    static constexpr inline T qsm(T val,T t){
+        if(t<0)t+=mod-1;
+        T ret=1;
+        for(T m=val;t;t>>=1,m=(i7)m*m%mod)if(t&1)ret=(i7)ret*m%mod;
+        return ret;
+    }
+
+    static constexpr array<array<T,cnt+1>,2> omega = []() -> array<array<T,cnt+1>,2> {
+        array<array<T,cnt+1>,2> ret{};
+        ret[0][cnt]=qsm(g,(mod-1>>cnt));
+        ret[1][cnt]=qsm(g,-(mod-1>>cnt));
+        for(int i = cnt;--i;)for(int k:{0,1})ret[k][i]=(i7)ret[k][i+1]*ret[k][i+1]%mod;
+        return ret;
+    }();
+
+    vector<T> rev;
+
+    template<bool inv>
+    void DFT(vector<T>& v){
+        for(int i = 0;i<n;i++)if(i<rev[i])swap(v[i],v[rev[i]]);
+        for(int l = 1,lv=1;l<n;l<<=1,lv++)for(T i=0,omega_l=omega[inv][lv];i<n;i+=l<<1)for(T j=0,w=1,tmp;j<l;j++,w=(i7)w*omega_l%mod){
+            tmp=(i7)v[l+i+j]*w%mod;
+            v[l+i+j]=v[i+j]-tmp;
+            v[i+j]=v[i+j]+tmp;
+            if(v[i+j]>=mod)v[i+j]-=mod;
+            if(v[l+i+j]<0)v[l+i+j]+=mod;
+        }
+        if constexpr (inv){
+            T lenrev=qsm(n,mod-2);
+            for(int i = 0;i<n;i++)v[i]=(i7)v[i]*lenrev%mod;
+        }
+    }
+
+    vector<T> operator()(vector<T> a,vector<T> b){
+        n=a.size()+b.size()-1;
+        if(n!=1<<__lg(n))n=1<<__lg(n)+1;
+        a.resize(n,0),b.resize(n,0);
+        rev.assign(n,0);
+        for(int i = 0,lg=__lg(n)-1;i<n;i++)rev[i]=(rev[i>>1]>>1)|((i&1)<<lg);
+        DFT<0>(a),DFT<0>(b);
+        for(int i = 0;i<n;i++)a[i]=(i7)a[i]*b[i]%mod;
+        DFT<1>(a);
+        return a;
+    }
+};
