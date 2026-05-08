@@ -1,0 +1,78 @@
+template<typename T>
+struct primal_dual{
+
+    static constexpr T INF=numeric_limits<T>::max()>>1;
+
+    #define all(x) x.begin(),x.end()
+
+    struct EDGE{
+        int to;
+        T cost,rc,cap;
+        EDGE(){}
+        EDGE(int a,T b,T c,T d):to(a),cost(b),rc(c),cap(d){}
+    };
+
+    int n;
+    vector<vector<int>> adj;
+    vector<EDGE> edges;
+    vector<int> id;
+    vector<T> dis,pot,pre;
+    vector<bool> vis;
+
+    primal_dual(int _):n(_),adj(_),id(_),dis(_),pot(_),pre(_),vis(_){}
+
+    inline void addedge(int u,int v,T cap,T cost){
+        adj[u].emplace_back(edges.size());
+        edges.emplace_back(v,cost,cap,cap);
+        adj[v].emplace_back(edges.size());
+        edges.emplace_back(u,-cost,0,0);
+    }
+
+    inline void spfa(int s,int t){
+        queue<int> q;
+        fill(all(pot),INF);
+        fill(all(vis),0);
+        pot[q.emplace(s)]=0;
+        for(int tmp;!q.empty();){
+            tmp=q.front(),q.pop(),vis[tmp]=0;
+            for(int i:adj[tmp]){
+                auto [x,cost,rc,cap]=edges[i];
+                if(cap&&pot[x]>pot[tmp]+cost){
+                    pot[x]=pot[tmp]+cost;
+                    if(!vis[x])vis[q.emplace(x)]=1;
+                }
+            }
+        }
+    }
+
+    inline bool dijkstra(int s,int t){
+        fill(all(dis),INF);
+        fill(all(vis),0);
+        dis[s]=0;
+        for(int i = 0;i<n;i++){
+            int pos;
+            T val=INF;
+            for(int j = 0;j<n;j++)if(!vis[j]&&dis[j]<val)pos=j,val=dis[j];
+            vis[pos]=1;
+            for(int j:adj[pos]){
+                auto [x,cost,rc,cap]=edges[j];
+                if(rc&&dis[x]>dis[pos]+cost+pot[pos]-pot[x])dis[x]=dis[pos]+cost+pot[pos]-pot[x],pre[x]=j;
+            }
+        }
+        return dis[t]!=INF;
+    }
+
+    inline T operator()(int s,int t){
+        T mc=0;
+        spfa(s,t);
+        while(dijkstra(s,t)){
+            T mf=INF;
+            for(int i = 0;i<n;i++)pot[i]+=dis[i];
+            for(int i=t;i!=s;i=edges[pre[i]^1].to)mf=min(mf,edges[pre[i]].rc);
+            for(int i=t;i!=s;i=edges[pre[i]^1].to)edges[pre[i]].rc-=mf,edges[pre[i]^1].rc+=mf;
+            mc+=mf*pot[t];
+        }
+        return mc;
+    }
+
+};
