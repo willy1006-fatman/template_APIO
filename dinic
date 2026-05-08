@@ -1,0 +1,85 @@
+template<typename T>
+struct Dinic{
+
+    static constexpr inline T flow_max = numeric_limits<T>::max() >> 1;
+    
+    int n;
+
+    struct EDGE{
+        int to;
+        T rc,cap;
+        EDGE(){}
+        EDGE(int a,T b,T c):to(a),rc(b),cap(c){}
+    };
+
+    vector<EDGE> edges;
+    vector<vector<int>> adj;
+    vector<int> dis,id;
+    vector<bool> vis;
+
+    Dinic(int _):n(_),adj(_),edges(),dis(n),id(n),vis(n){}
+
+    inline void addedge(int u,int v,T cap){
+        adj[u].emplace_back(edges.size());
+        edges.emplace_back(v,cap,cap);
+        adj[v].emplace_back(edges.size());
+        edges.emplace_back(u,0,cap);
+    }
+
+    inline bool bfs(int s,int t){
+        fill(dis.begin(),dis.end(),1e9);
+        queue<int> q;
+        dis[q.emplace(s)]=0;
+        for(int tmp;!q.empty();){
+            tmp=q.front(),q.pop();
+            for(int eid:adj[tmp]){
+                auto [to,rc,cap]=edges[eid];
+                if(rc>0&&dis[to]==1e9)dis[q.emplace(to)]=dis[tmp]+1;
+            }
+        }
+        return dis[t]!=1e9;
+    }
+
+    T dfs(int now,int t,T cap=flow_max){
+        if(now==t||!cap)return cap;
+        T ret=0;
+        for(int& i=id[now];i<adj[now].size();i++){
+            int eid=adj[now][i];
+            auto& [to,rc,c]=edges[eid];
+            if(dis[to]!=dis[now]+1)continue;
+            T flow=dfs(to,t,min(cap,rc));
+            cap-=flow,ret+=flow,rc-=flow,edges[eid^1].rc+=flow;
+        }
+        return ret;
+    }
+
+    inline void reach(int s){
+        queue<int> q;
+        vis[q.emplace(s)]=1;
+        for(int tmp;!q.empty();){
+            tmp=q.front(),q.pop();
+            for(int eid:adj[tmp]){
+                auto [to,rc,cap]=edges[eid];
+                if(!vis[to]&&rc)vis[q.emplace(to)]=1;
+            }
+        }
+    }
+
+    T operator()(int s,int t){
+        T ret=0;
+        while(bfs(s,t)){
+            fill(id.begin(),id.end(),0);
+            while(T flow=dfs(s,t))ret+=flow;
+        }
+        return ret;
+    }
+
+    inline vector<pair<int,int>> mincut(){
+        vector<pair<int,int>> ret;
+        rep(i,0,n)if(vis[i])for(auto eid:adj[i]){
+            auto [to,rc,cap]=edges[eid];
+            if(!vis[to])ret.emplace_back(i,to);
+        };
+        return ret;
+    }
+};
