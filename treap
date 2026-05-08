@@ -1,0 +1,100 @@
+mt19937 rng(time(0)*1ll*777771449);
+
+template<typename T,int maxN>
+struct TREAP{
+    int cnt,root;
+
+    vector<T> dfn;
+
+    struct NODE{
+        int lc,rc,rev;
+        T pri,sz,val,sum,addval;
+        NODE()=default;
+    }fn[maxN*30];
+
+    TREAP():cnt(0),root(0){}
+    
+    inline void pull(int x){
+        fn[x].sum=fn[x].val+fn[x].addval;
+        fn[x].sz=1;
+        if(fn[x].rc)fn[x].sum+=fn[fn[x].rc].sum+fn[fn[x].rc].sz*fn[x].addval,fn[x].sz+=fn[fn[x].rc].sz;
+        if(fn[x].lc)fn[x].sum+=fn[fn[x].lc].sum+fn[fn[x].lc].sz*fn[x].addval,fn[x].sz+=fn[fn[x].lc].sz;
+    }
+
+    inline void push(int x){
+        if(fn[x].rev){
+            swap(fn[x].lc,fn[x].rc);
+            if(fn[x].lc)fn[fn[x].lc].rev^=1;
+            if(fn[x].rc)fn[fn[x].rc].rev^=1;
+            fn[x].rev=0;
+        }
+        if(fn[x].lc)fn[fn[x].lc].addval+=fn[x].addval;
+        if(fn[x].rc)fn[fn[x].rc].addval+=fn[x].addval;
+        fn[x].addval=0;
+    }
+
+    int merge(int a,int b){
+        if(!a||!b)return a?a:b;
+        push(a),push(b);
+        if(fn[a].pri<fn[b].pri)return fn[b].lc=merge(a,fn[b].lc),pull(b),b;
+        return fn[a].rc=merge(fn[a].rc,b),pull(a),a;
+    }
+
+    void split(int rt,int k,int& a,int& b){
+        if(!rt)return a=0,b=0,void();
+        push(rt);
+        if(fn[fn[rt].lc].sz<k)a=rt,split(fn[rt].rc,k-fn[fn[rt].lc].sz-1,fn[a].rc,b);
+        else b=rt,split(fn[rt].lc,k,a,fn[b].lc);
+        pull(rt);
+    }
+
+    inline void ins(int id,T val){
+        int a,b,cur=++cnt;
+        fn[cur].pri=rng(),fn[cur].val=val,pull(cur);
+        split(root,id-1,a,b);
+        root=merge(merge(a,cur),b);
+    }
+
+    inline void del(int l,int r){ // 區間刪除
+        int a,b,c,d;
+        split(root,l-1,a,b);
+        split(b,r-l+1,c,d);
+        root=merge(a,d);
+    }
+
+    inline void upd(int l,int r,T val,int rev){ // 支援區間反轉和區間加值
+        int a,b,c,d;
+        split(root,l-1,a,b);
+        split(b,r-l+1,c,d);
+        fn[c].addval+=val,fn[c].rev=rev;
+        pull(c);
+        root=merge(merge(a,c),d);
+    }
+
+    inline T query(int l,int r){
+        int a,b,c,d;
+        split(root,l-1,a,b);
+        split(b,r-l+1,c,d);
+        T ret=fn[c].sum;
+        root=merge(merge(a,c),d);
+        return ret;
+    }
+
+    inline void move(int l,int r){ // 區間移動
+        int a,b,c,d;
+        split(root,l-1,a,b);
+        split(b,r-l+1,c,d);
+        root=merge(merge(a,d),c);
+    }
+
+    void dfs(int now){
+        if(fn[now].lc)dfs(fn[now].lc);
+        dfn.emplace_back(fn[now].val);
+        if(fn[now].rc)dfs(fn[now].rc);
+    }
+
+    vector<T> operator()(){
+        dfn.clear(),dfs(root);
+        return dfn;
+    }
+};
