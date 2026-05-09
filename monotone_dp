@@ -1,0 +1,22 @@
+template <class F, class Comp>
+vec<int> convex_monotone_optima(int N, int M, const F& cost, const Comp& cmp) {
+    vec<int> ret(N);
+    auto f = [&](auto&& f, int l, int r, int ql, int qr) -> void {
+        if (ql == qr) {
+            for (int i = l; i < r; i++)
+                ret[i] = ql;
+            return;
+        }
+        int mid = (l + r) >> 1, opt = ql;
+        auto best = cost(mid, ql);
+        for (int i = ql + 1; i <= qr; i++)
+            if (auto tmp = cost(mid, i); cmp(tmp, best))
+                best = tmp, opt = i;
+        ret[mid] = opt;
+        if (l + 1 == r) return;
+        f(f, l, mid, ql, opt);
+        f(f, mid, r, opt, qr);
+    };
+    f(f, 0, N, 0, M - 1);
+    return ret;
+}
